@@ -25,31 +25,75 @@ function render(element, content) {
   }
 }
 
-function reactive(obj) {
-  const keys = Object.keys(obj)
-  const reactiveObj = {}
-
-  keys.forEach((key) => {
-    let value = obj[key]
-    Object.defineProperty(reactiveObj, key, {
-      get() {
-        console.log(`Getting value, ${value}`)
-        track(reactiveObj, key)
-        return value
-      },
-      set(newValue) {
-        console.log(`Setting value, ${newValue}`)
-        if (newValue !== value) {
-          value = newValue
-          trigger(reactiveObj, key)
-        }
-      }
-    })
-  })
-
-    return reactiveObj
-
+function reactive(target) {
+  if (typeof target !== 'object' || target === null) {
+    return target;
   }
+
+  return new Proxy(target, {
+    get(target, key, receiver) {
+      track(target, key);
+      const result = Reflect.get(target, key, receiver);
+      // Recursively make nested objects reactive
+      return typeof result === 'object' && result !== null ? reactive(result) : result;
+    },
+    set(target, key, value, receiver) {
+      const oldValue = target[key];
+      const result = Reflect.set(target, key, value, receiver);
+      if (oldValue !== value) {
+        trigger(target, key);
+      }
+      return result;
+    }
+  });
+}
+
+function ref(initialValue) {
+  return {
+    _value: initialValue,
+    get value() {
+      track(this, 'value');
+      return this._value;
+    },
+    set value(newValue) {
+      if (newValue !== this._value) {
+        this._value = newValue;
+        trigger(this, 'value');
+      }
+    }
+  };
+}
+
+function computed(getter) {
+  const result = ref();
+  createEffect(() => {
+    result.value = getter();
+  });
+  return result;
+}
+
+function watchEffect(fn) {
+  createEffect(fn);
+}
+
+function watch(source, cb) {
+  let oldValue;
+  let isInit = true;
+  createEffect(() => {
+    let newValue;
+    if (typeof source === 'function') {
+      newValue = source();
+    } else if (source && source._value !== undefined) {
+      newValue = source.value;
+    }
+    
+    if (!isInit && newValue !== oldValue) {
+      cb(newValue, oldValue);
+    }
+    oldValue = newValue;
+    isInit = false;
+  });
+}
 
   function track(target, key) {
     if (currentEffect) {
