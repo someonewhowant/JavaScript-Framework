@@ -11,3 +11,4 @@ export { createRouter, useRouter, useRoute, RouterView, RouterLink } from './pac
 export { defineStore, getStores } from './packages/store/index.js';
 export { createApp } from './packages/runtime/app.js';
 export { inject } from './packages/runtime/lifecycle.js';
+export { renderToString } from './packages/server-renderer/index.js';

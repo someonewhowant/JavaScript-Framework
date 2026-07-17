@@ -6,20 +6,46 @@ let activeRouter = null;
 
 export function createRouter(options) {
   const routes = options.routes || [];
+  const isBrowser = typeof window !== 'undefined';
   
-  const currentPath = ref(window.location.hash.slice(1) || '/');
+  const initialPath = isBrowser ? (window.location.hash.slice(1) || '/') : (options.initialPath || '/');
+  const currentPath = ref(initialPath);
 
-  window.addEventListener('hashchange', () => {
-    currentPath.value = window.location.hash.slice(1) || '/';
-  });
+  if (isBrowser) {
+    window.addEventListener('hashchange', () => {
+      currentPath.value = window.location.hash.slice(1) || '/';
+    });
+  }
 
   const push = (path) => {
-    window.location.hash = path;
+    if (isBrowser) window.location.hash = path;
+    else currentPath.value = path;
   };
 
   const currentRoute = computed(() => {
-    const matched = routes.find(r => r.path === currentPath.value);
-    return matched || { path: currentPath.value, component: null };
+    for (const r of routes) {
+      if (r.path === currentPath.value) {
+        return { ...r, params: {} };
+      }
+      if (r.path.includes(':')) {
+        const routeParts = r.path.split('/');
+        const currentParts = currentPath.value.split('/');
+        if (routeParts.length === currentParts.length) {
+          let match = true;
+          const params = {};
+          for (let i = 0; i < routeParts.length; i++) {
+            if (routeParts[i].startsWith(':')) {
+              params[routeParts[i].slice(1)] = currentParts[i];
+            } else if (routeParts[i] !== currentParts[i]) {
+              match = false;
+              break;
+            }
+          }
+          if (match) return { ...r, params };
+        }
+      }
+    }
+    return { path: currentPath.value, component: null, params: {} };
   });
 
   const router = {
@@ -48,7 +74,7 @@ export function RouterView() {
     if (!activeRouter) return h('div', null, 'Router not initialized');
     const route = activeRouter.currentRoute.value;
     if (route && route.component) {
-      return h(route.component, {});
+      return h(route.component, { params: route.params || {} });
     }
     return h('div', null, '404 - Page Not Found');
   };

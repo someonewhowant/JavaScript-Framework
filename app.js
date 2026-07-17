@@ -1,10 +1,10 @@
 import { h, createApp, createRouter, RouterView, RouterLink, defineStore, ref, inject } from './jiggle.js';
 
-// --- Phase 5.3: Plugin API Demo ---
+
 const LoggerPlugin = {
   name: 'logger',
   install(app, options = {}) {
-    // 1. Add a global mixin
+    // Add a global mixin
     app.mixin({
       onMounted() {
         if (options.enableLogs) {
@@ -12,7 +12,7 @@ const LoggerPlugin = {
         }
       }
     });
-    
+
     // 2. Provide a global service
     app.provide('logger', {
       info: (msg) => console.info(`ℹ️ ${msg}`),
@@ -26,7 +26,7 @@ const useCounterStore = defineStore('counter', () => {
   const count = ref(0);
   const increment = () => count.value++;
   const decrement = () => count.value--;
-  
+
   return { count, increment, decrement };
 });
 
@@ -34,18 +34,18 @@ function Home() {
   const store = useCounterStore();
   const logger = inject('logger');
 
-  return () => h('div', null, 
-    h('h2', { style: 'color: #42b883;' }, 'Home Page'), 
+  return () => h('div', null,
+    h('h2', { style: 'color: #42b883;' }, 'Home Page'),
     h('p', null, 'Welcome to Jiggle.js Router, Store & Plugins!'),
     h('div', { style: 'padding: 10px; border: 1px solid #ccc; margin-top: 10px;' },
       h('h3', null, 'Global Counter'),
       h('p', null, `Count: ${store.count.value}`),
-      h('button', { 
-        onClick: () => { 
-          store.increment(); 
+      h('button', {
+        onClick: () => {
+          store.increment();
           logger.info(`Incremented to ${store.count.value}`);
-        }, 
-        style: 'margin-right: 5px;' 
+        },
+        style: 'margin-right: 5px;'
       }, '+ Increment Global')
     )
   );
@@ -54,8 +54,8 @@ function Home() {
 function About() {
   const store = useCounterStore();
 
-  return () => h('div', null, 
-    h('h2', { style: 'color: #35495e;' }, 'About Page'), 
+  return () => h('div', null,
+    h('h2', { style: 'color: #35495e;' }, 'About Page'),
     h('p', null, 'Jiggle.js is a lightweight frontend framework built from scratch.'),
     h('div', { style: 'padding: 10px; border: 1px solid #ccc; margin-top: 10px;' },
       h('h3', null, 'Global Counter (Shared State)'),
