@@ -7,18 +7,11 @@ export function patchProp(el, key, oldValue, newValue) {
 
   if (key.startsWith('on')) {
     const eventName = key.slice(2).toLowerCase();
-    if (oldValue) {
-      el.removeEventListener(eventName, oldValue);
-    }
-    if (newValue) {
-      el.addEventListener(eventName, newValue);
-    }
+    if (oldValue) el.removeEventListener(eventName, oldValue);
+    if (newValue) el.addEventListener(eventName, newValue);
   } else {
-    if (newValue == null || newValue === false) {
-      el.removeAttribute(key);
-    } else {
-      el.setAttribute(key, newValue);
-    }
+    if (newValue == null || newValue === false) el.removeAttribute(key);
+    else el.setAttribute(key, newValue);
   }
 }
 
@@ -26,30 +19,25 @@ export function patchProps(el, oldProps, newProps) {
   oldProps = oldProps || {};
   newProps = newProps || {};
 
-  for (const key in newProps) {
-    patchProp(el, key, oldProps[key], newProps[key]);
-  }
-
+  for (const key in newProps) patchProp(el, key, oldProps[key], newProps[key]);
   for (const key in oldProps) {
-    if (!(key in newProps)) {
-      patchProp(el, key, oldProps[key], null);
-    }
+    if (!(key in newProps)) patchProp(el, key, oldProps[key], null);
   }
 }
 
-export function patchChildren(el, oldChildren, newChildren) {
+export function patchChildren(el, oldChildren, newChildren, appContext) {
   oldChildren = oldChildren || [];
   newChildren = newChildren || [];
 
   const commonLength = Math.min(oldChildren.length, newChildren.length);
 
   for (let i = 0; i < commonLength; i++) {
-    patch(oldChildren[i], newChildren[i]);
+    patch(oldChildren[i], newChildren[i], appContext);
   }
 
   if (newChildren.length > oldChildren.length) {
     for (let i = commonLength; i < newChildren.length; i++) {
-      mount(newChildren[i], el);
+      mount(newChildren[i], el, appContext);
     }
   } else if (oldChildren.length > newChildren.length) {
     for (let i = oldChildren.length - 1; i >= commonLength; i--) {
@@ -64,31 +52,41 @@ export function unmount(vnode) {
     unmount(vnode.component.subTree);
     return;
   }
-
   if (vnode.children && Array.isArray(vnode.children)) {
     vnode.children.forEach(child => unmount(child));
   }
-
   if (vnode.el && vnode.el.parentNode) {
     vnode.el.parentNode.removeChild(vnode.el);
   }
 }
 
-export function mountComponent(vnode, container) {
+export function mountComponent(vnode, container, appContext) {
   const initialProps = vnode.props || {};
   if (vnode.children && vnode.children.length > 0) {
     initialProps.children = vnode.children;
   }
 
+  const resolvedContext = vnode.appContext || appContext || { mixins: [], provides: {} };
+
   const instance = {
     vnode,
     props: reactive(initialProps),
+    appContext: resolvedContext,
     render: null,
     subTree: null,
     isMounted: false,
     el: null,
     hooks: { mounted: [], updated: [], unmounted: [] }
   };
+  
+  if (resolvedContext.mixins) {
+    resolvedContext.mixins.forEach(mixin => {
+      if (mixin.onMounted) instance.hooks.mounted.push(mixin.onMounted.bind(instance));
+      if (mixin.onUpdated) instance.hooks.updated.push(mixin.onUpdated.bind(instance));
+      if (mixin.onUnmounted) instance.hooks.unmounted.push(mixin.onUnmounted.bind(instance));
+    });
+  }
+
   vnode.component = instance;
 
   setCurrentInstance(instance);
@@ -99,7 +97,7 @@ export function mountComponent(vnode, container) {
     if (!instance.isMounted) {
       const subTree = instance.render();
       instance.subTree = subTree;
-      mount(subTree, container);
+      mount(subTree, container, resolvedContext);
       vnode.el = subTree.el;
       instance.isMounted = true;
       instance.hooks.mounted.forEach(cb => cb());
@@ -107,16 +105,16 @@ export function mountComponent(vnode, container) {
       const prevSubTree = instance.subTree;
       const nextSubTree = instance.render();
       instance.subTree = nextSubTree;
-      patch(prevSubTree, nextSubTree);
+      patch(prevSubTree, nextSubTree, resolvedContext);
       vnode.el = nextSubTree.el;
       instance.hooks.updated.forEach(cb => cb());
     }
   });
 }
 
-export function mount(vnode, container) {
+export function mount(vnode, container, appContext = null) {
   if (typeof vnode.tag === 'function') {
-    mountComponent(vnode, container);
+    mountComponent(vnode, container, appContext);
     return;
   }
 
@@ -137,20 +135,20 @@ export function mount(vnode, container) {
   }
 
   if (vnode.children) {
-    vnode.children.forEach(child => mount(child, el));
+    vnode.children.forEach(child => mount(child, el, appContext));
   }
 
   container.appendChild(el);
 }
 
-export function patch(n1, n2) {
+export function patch(n1, n2, appContext = null) {
   if (n1 === n2) return;
 
   if (typeof n1.tag === 'function' && typeof n2.tag === 'function') {
     if (n1.tag !== n2.tag) {
       const parent = n1.el.parentNode;
       unmount(n1);
-      mount(n2, parent);
+      mount(n2, parent, appContext);
       return;
     }
 
@@ -174,21 +172,19 @@ export function patch(n1, n2) {
   if (n1.tag !== n2.tag) {
     const parent = n1.el.parentNode;
     unmount(n1);
-    mount(n2, parent);
+    mount(n2, parent, appContext);
     return;
   }
 
   const el = (n2.el = n1.el);
 
   if (n2.tag === null) {
-    if (n1.children !== n2.children) {
-      el.textContent = n2.children;
-    }
+    if (n1.children !== n2.children) el.textContent = n2.children;
     return;
   }
 
   patchProps(el, n1.props, n2.props);
-  patchChildren(el, n1.children, n2.children);
+  patchChildren(el, n1.children, n2.children, appContext);
 }
 
 export function render(vnode, containerSelector) {
@@ -197,9 +193,9 @@ export function render(vnode, containerSelector) {
 
   if (!container._vnode) {
     container.innerHTML = '';
-    mount(vnode, container);
+    mount(vnode, container, vnode.appContext);
   } else {
-    patch(container._vnode, vnode);
+    patch(container._vnode, vnode, vnode.appContext);
   }
   container._vnode = vnode;
 }

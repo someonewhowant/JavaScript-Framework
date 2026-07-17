@@ -9,3 +9,5 @@ export { mount, patch, render } from './packages/runtime/render.js';
 export { compile } from './packages/compiler/compile.js';
 export { createRouter, useRouter, useRoute, RouterView, RouterLink } from './packages/router/index.js';
 export { defineStore, getStores } from './packages/store/index.js';
+export { createApp } from './packages/runtime/app.js';
+export { inject } from './packages/runtime/lifecycle.js';

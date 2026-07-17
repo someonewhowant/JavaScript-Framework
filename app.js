@@ -1,4 +1,25 @@
-import { h, render, createRouter, RouterView, RouterLink, defineStore, ref } from './jiggle.js';
+import { h, createApp, createRouter, RouterView, RouterLink, defineStore, ref, inject } from './jiggle.js';
+
+// --- Phase 5.3: Plugin API Demo ---
+const LoggerPlugin = {
+  name: 'logger',
+  install(app, options = {}) {
+    // 1. Add a global mixin
+    app.mixin({
+      onMounted() {
+        if (options.enableLogs) {
+          console.log(`[LoggerPlugin] Component Mounted.`);
+        }
+      }
+    });
+    
+    // 2. Provide a global service
+    app.provide('logger', {
+      info: (msg) => console.info(`ℹ️ ${msg}`),
+      success: (msg) => console.log(`✅ ${msg}`)
+    });
+  }
+};
 
 // Global Store
 const useCounterStore = defineStore('counter', () => {
@@ -11,14 +32,21 @@ const useCounterStore = defineStore('counter', () => {
 
 function Home() {
   const store = useCounterStore();
+  const logger = inject('logger');
 
   return () => h('div', null, 
     h('h2', { style: 'color: #42b883;' }, 'Home Page'), 
-    h('p', null, 'Welcome to Jiggle.js Router & Store!'),
+    h('p', null, 'Welcome to Jiggle.js Router, Store & Plugins!'),
     h('div', { style: 'padding: 10px; border: 1px solid #ccc; margin-top: 10px;' },
       h('h3', null, 'Global Counter'),
       h('p', null, `Count: ${store.count.value}`),
-      h('button', { onClick: store.increment, style: 'margin-right: 5px;' }, '+ Increment Global')
+      h('button', { 
+        onClick: () => { 
+          store.increment(); 
+          logger.info(`Incremented to ${store.count.value}`);
+        }, 
+        style: 'margin-right: 5px;' 
+      }, '+ Increment Global')
     )
   );
 }
@@ -58,4 +86,7 @@ function App() {
   );
 }
 
-render(h(App), '#container');
+// Bootstrap with createApp and Plugin API
+const app = createApp(App);
+app.use(LoggerPlugin, { enableLogs: true });
+app.mount('#container');

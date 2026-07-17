@@ -15,3 +15,12 @@ export function onUpdated(fn) {
 export function onUnmounted(fn) {
   if (currentInstance) currentInstance.hooks.unmounted.push(fn);
 }
+
+export function inject(key, defaultValue) {
+  if (currentInstance && currentInstance.appContext) {
+    if (key in currentInstance.appContext.provides) {
+      return currentInstance.appContext.provides[key];
+    }
+  }
+  return defaultValue;
+}
