@@ -1,35 +1,38 @@
-function Counter(props) {
-  const count = ref(props.initial || 0);
-  
-  onMounted(() => {
-    console.log('Counter mounted with initial:', props.initial);
-  });
-  
-  onUpdated(() => {
-    console.log('Counter updated, new count:', count.value);
-  });
-  
-  onUnmounted(() => {
-    console.log('Counter unmounted!');
-  });
-  
-  return () => h('div', { class: 'counter-box', style: 'border: 1px solid #ccc; padding: 10px; margin-top: 10px;' },
-    h('h3', null, `Counter Component (Initial: ${props.initial})`),
-    h('p', null, `Count: ${count.value}`),
-    h('button', { onClick: () => count.value++ }, '+1'),
-    h('button', { onClick: () => count.value-- }, '-1')
+import { h, render, createRouter, RouterView, RouterLink } from './jiggle.js';
+
+function Home() {
+  return () => h('div', null, 
+    h('h2', { style: 'color: #42b883;' }, 'Home Page'), 
+    h('p', null, 'Welcome to Jiggle.js Router!')
+  );
+}
+
+function About() {
+  return () => h('div', null, 
+    h('h2', { style: 'color: #35495e;' }, 'About Page'), 
+    h('p', null, 'Jiggle.js is a lightweight frontend framework built from scratch.')
   );
 }
 
 function App() {
-  const showCounter = ref(true);
-  const resetKey = ref(0);
-  
-  return () => h('div', { class: 'app' },
-    h('h1', null, 'Jiggle.js Components!'),
-    h('button', { onClick: () => showCounter.value = !showCounter.value }, showCounter.value ? 'Hide Counter' : 'Show Counter'),
-    h('button', { onClick: () => resetKey.value++ }, 'Reset App Counter'),
-    showCounter.value ? h(Counter, { initial: resetKey.value * 10 }) : h('p', null, 'Counter is hidden')
+  // Initialize router inside the root component
+  createRouter({
+    routes: [
+      { path: '/', component: Home },
+      { path: '/about', component: About }
+    ]
+  });
+
+  return () => h('div', { class: 'app-container', style: 'padding: 20px; font-family: sans-serif;' },
+    h('h1', null, 'Jiggle.js App'),
+    h('nav', { style: 'margin-bottom: 20px; display: flex; gap: 15px;' },
+      h(RouterLink, { to: '/', style: 'color: blue; text-decoration: none;' }, 'Home'),
+      h(RouterLink, { to: '/about', style: 'color: blue; text-decoration: none;' }, 'About')
+    ),
+    h('hr'),
+    h('div', { style: 'margin-top: 20px;' },
+      h(RouterView)
+    )
   );
 }
 
