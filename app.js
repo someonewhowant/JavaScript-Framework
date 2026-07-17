@@ -1,21 +1,43 @@
-import { h, render, createRouter, RouterView, RouterLink } from './jiggle.js';
+import { h, render, createRouter, RouterView, RouterLink, defineStore, ref } from './jiggle.js';
+
+// Global Store
+const useCounterStore = defineStore('counter', () => {
+  const count = ref(0);
+  const increment = () => count.value++;
+  const decrement = () => count.value--;
+  
+  return { count, increment, decrement };
+});
 
 function Home() {
+  const store = useCounterStore();
+
   return () => h('div', null, 
     h('h2', { style: 'color: #42b883;' }, 'Home Page'), 
-    h('p', null, 'Welcome to Jiggle.js Router!')
+    h('p', null, 'Welcome to Jiggle.js Router & Store!'),
+    h('div', { style: 'padding: 10px; border: 1px solid #ccc; margin-top: 10px;' },
+      h('h3', null, 'Global Counter'),
+      h('p', null, `Count: ${store.count.value}`),
+      h('button', { onClick: store.increment, style: 'margin-right: 5px;' }, '+ Increment Global')
+    )
   );
 }
 
 function About() {
+  const store = useCounterStore();
+
   return () => h('div', null, 
     h('h2', { style: 'color: #35495e;' }, 'About Page'), 
-    h('p', null, 'Jiggle.js is a lightweight frontend framework built from scratch.')
+    h('p', null, 'Jiggle.js is a lightweight frontend framework built from scratch.'),
+    h('div', { style: 'padding: 10px; border: 1px solid #ccc; margin-top: 10px;' },
+      h('h3', null, 'Global Counter (Shared State)'),
+      h('p', null, `Count from Home: ${store.count.value}`),
+      h('button', { onClick: store.decrement }, '- Decrement Global')
+    )
   );
 }
 
 function App() {
-  // Initialize router inside the root component
   createRouter({
     routes: [
       { path: '/', component: Home },
