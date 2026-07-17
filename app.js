@@ -15,23 +15,15 @@ watch(() => state.age, (newVal, oldVal) => {
 });
 
 function renderApp() {
-  render('#container', `
-    <h1>Hello, ${fullName.value}!</h1>
-    <p>Age: ${state.age}</p>
-    <p>Count: ${count.value}</p>
-  `);
+  const vnode = h('div', { class: 'app' },
+    h('h1', null, `Hello, ${fullName.value}!`),
+    h('p', null, `Age: ${state.age}`),
+    h('p', null, `Count: ${count.value}`),
+    h('button', { onClick: () => count.value++ }, 'Increment Count'),
+    h('button', { onClick: () => state.age++ }, 'Happy Birthday'),
+    h('button', { onClick: () => state.user.firstName = state.user.firstName === 'John' ? 'Jane' : 'John' }, 'Toggle Name')
+  );
+  render(vnode, '#container');
 }
 
 createEffect(renderApp);
-
-setTimeout(() => {
-  state.user.firstName = 'Jane'; // Tests nested reactivity
-}, 1000);
-
-setTimeout(() => {
-  state.age = 31; // Tests watch and reactivity
-}, 2000);
-
-setTimeout(() => {
-  count.value++; // Tests ref
-}, 3000);
